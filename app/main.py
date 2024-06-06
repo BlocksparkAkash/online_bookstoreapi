@@ -14,8 +14,6 @@ app.include_router(user)
 async def root():
      return {"message": "Hello World"}
 
-
-
 # @app.get("/favicon.ico")
 # async def get_favicon():
 #     raise HTTPException(status_code=404)
