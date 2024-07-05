@@ -5,6 +5,7 @@ from app.database import engine, SessionLocal
 from typing import Annotated,Optional
 from sqlalchemy.orm import Session
 from app.auth import db_dependency, router
+from app import book,cart,order
 
 
 app = FastAPI()
@@ -13,7 +14,9 @@ app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
 app.include_router(router)
-
+app.include_router(book.router)
+app.include_router(cart.router)
+app.include_router(order.router)
 
 def get_db():
     db=SessionLocal()
@@ -30,8 +33,8 @@ async def read_root(user: Optional[str] = None, db: Session = Depends(get_db)):
     return {"User": user}
     
 if __name__ == "__main__":
-    #  uvicorn.run(app)
-     uvicorn.run(app,host="0.0.0.0",port=8080)
+    #   uvicorn.run(app)
+     uvicorn.run(app,host="0.0.0.0",port=3306)
 
 
 
