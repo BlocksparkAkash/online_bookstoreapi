@@ -54,7 +54,7 @@ class DBBook(Base):
     quantity_available = Column(Integer, nullable=False)
 
 # POST endpoint to create a new book
-@router.post("/", response_model=BookCreate)
+@router.post("/addbook", response_model=BookCreate)
 def create_book(book: BookCreate, db: Session = Depends(get_db)):
     db_book = DBBook(
         title=book.title,
@@ -113,7 +113,7 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
 
 
 
-@router.put("/books/{book_id}", response_model=BookResponse)
+@router.put("/update/{book_id}", response_model=BookResponse)
 def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db)):
     """
     Update details of a specific book.
@@ -155,7 +155,7 @@ def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get
 
 
 # DELETE endpoint to delete a specific book
-@router.delete("/{book_id}", response_model=BookResponse)
+@router.delete("/delete/{book_id}", response_model=BookResponse)
 def delete_book(book_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific book.

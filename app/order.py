@@ -85,7 +85,7 @@ def get_orders(db: Session = Depends(get_db), current_user: Users = Depends(get_
     
     return OrderResponse(items=order_items_pydantic)
 
-@router.post("/", response_model=OrderResponse)
+@router.post("/addorder", response_model=OrderResponse)
 def create_order(
     request: OrderCreateRequest,
     db: Session = Depends(get_db),
@@ -110,4 +110,4 @@ def create_order(
     )
     
     return OrderResponse(items=[order_item], message="Order placed successfully")
-    
+      

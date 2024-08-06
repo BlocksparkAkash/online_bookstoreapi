@@ -34,7 +34,8 @@ async def read_root(user: Optional[str] = None, db: Session = Depends(get_db)):
     
 if __name__ == "__main__":
     #   uvicorn.run(app)
-     uvicorn.run(app,host="0.0.0.0",port=3306)
+     uvicorn.run(app,host="0.0.0.0",port=1290)
+
 
 
 
