@@ -4,6 +4,9 @@ from app.database import SessionLocal, Base
 from sqlalchemy import Column, Integer, String, Float
 from pydantic import BaseModel
 from typing import List
+from app.auth import get_current_user
+from app.models import Users 
+
 
 router = APIRouter(
     prefix='/book',
@@ -24,6 +27,7 @@ class Book(BaseModel):
     author: str
     price: float
     quantity_available: int
+    image_url: str = None  # Optional field for image URL
 
 class BookResponse(BaseModel):
     message: str
@@ -35,6 +39,7 @@ class BookCreate(BaseModel):
     author: str
     price: float
     quantity_available: int
+    # image_url: str = None  # Optional field for image URL
 
 
 class BookUpdate(BaseModel):
@@ -48,19 +53,30 @@ class DBBook(Base):
     __tablename__ = 'books'
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False, unique=True)
     author = Column(String, nullable=False)
     price = Column(Float, nullable=False)
     quantity_available = Column(Integer, nullable=False)
+    image_url = Column(String, nullable=True, unique=True)  # Add this field for image URLs
 
 # POST endpoint to create a new book
 @router.post("/addbook", response_model=BookCreate)
-def create_book(book: BookCreate, db: Session = Depends(get_db)):
+def create_book(book: BookCreate, db: Session = Depends(get_db), current_user: Users = Depends(get_current_user)):
+
+    existing_book = db.query(DBBook).filter(
+        (DBBook.title == book.title)).first()
+    
+
+    if existing_book:
+        raise HTTPException(status_code=400, detail="Book with this title already exists")
+
+
     db_book = DBBook(
         title=book.title,
         author=book.author,
         price=book.price,
-        quantity_available=book.quantity_available
+        quantity_available=book.quantity_available,
+        image_url=book.image_url  # Set image URL
     )
     db.add(db_book)
     db.commit()
@@ -69,7 +85,8 @@ def create_book(book: BookCreate, db: Session = Depends(get_db)):
 
 # GET endpoint to retrieve all books (example)
 @router.get("/books", response_model=List[str])
-def get_books(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def get_books(skip: int = 0, limit: int = 10, db: Session = Depends(get_db),current_user: Users = Depends(get_current_user)):
+    
     """
     Retrieve a list of book titles from the bookstore.
 
@@ -86,7 +103,9 @@ def get_books(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
 # Additional CRUD endpoints can be added similarly (GET by ID, PUT, DELETE)
 
 @router.get("/{book_id}", response_model=BookResponse)
-def get_book(book_id: int, db: Session = Depends(get_db)):
+def get_book(book_id: int, db: Session = Depends(get_db),current_user: Users = Depends(get_current_user)):
+    
+
     """
     Retrieve details of a specific book.
 
@@ -106,7 +125,8 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
             "title": book.title,
             "author": book.author,
             "price": book.price,
-            "quantity_available": book.quantity_available
+            "quantity_available": book.quantity_available,
+           
         }
     }
     return response
@@ -114,7 +134,8 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/update/{book_id}", response_model=BookResponse)
-def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db)):
+def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get_db),current_user: Users = Depends(get_current_user)):
+  
     """
     Update details of a specific book.
 
@@ -134,6 +155,7 @@ def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get
     book.author = book_update.author
     book.price = book_update.price
     book.quantity_available = book_update.quantity_available
+    # book.image_url = book_update.image_url  # Update image URL
 
     db.commit()
     db.refresh(book)
@@ -144,7 +166,8 @@ def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get
             "title": book.title,
             "author": book.author,
             "price": book.price,
-            "quantity_available": book.quantity_available
+            "quantity_available": book.quantity_available,
+            # "image_url": book.image_url  # Include image URL in the response
         }
     }
     return response
@@ -156,7 +179,8 @@ def update_book(book_id: int, book_update: BookUpdate, db: Session = Depends(get
 
 # DELETE endpoint to delete a specific book
 @router.delete("/delete/{book_id}", response_model=BookResponse)
-def delete_book(book_id: int, db: Session = Depends(get_db)):
+def delete_book(book_id: int, db: Session = Depends(get_db),current_user: Users = Depends(get_current_user)):
+
     """
     Delete a specific book.
 

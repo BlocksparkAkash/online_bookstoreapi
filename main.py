@@ -6,10 +6,22 @@ from typing import Annotated,Optional
 from sqlalchemy.orm import Session
 from app.auth import db_dependency, router
 from app import book,cart,order
+from fastapi.middleware.cors import CORSMiddleware
+import bcrypt
+
+
 
 
 app = FastAPI()
 # app.include_router(auth.router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this as needed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -30,11 +42,15 @@ def get_db():
 async def read_root(user: Optional[str] = None, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=401, detail="Authentication Failed")
+       
+    print(bcrypt.__version__)
+
     return {"User": user}
     
 if __name__ == "__main__":
     #   uvicorn.run(app)
-     uvicorn.run(app,host="0.0.0.0",port=1290)
+     uvicorn.run(app,host="0.0.0.0",port=5450)
+
 
 
 

@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:1234@192.168.0.108:3306/online_bookstore"
+SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:1234@192.168.1.5:3306/online_bookstore"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

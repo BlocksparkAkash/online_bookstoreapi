@@ -11,6 +11,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
   # Assuming you have a schema for user creation
 
 
@@ -23,7 +24,7 @@ SECRET_KEY='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 ALGORITHM='HS256'
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
 # oauth2_bearer = Auth2PasswordRequestBearer(tokenUrl='auth/token')
 
 
@@ -55,6 +56,17 @@ db_dependency = Annotated[Session, Depends(get_db)]
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def create_user(db:db_dependency,
                         create_user_request:CreateUserRequest):
+
+ # Check if the username or email already exists
+    existing_user = db.query(Users).filter(
+        (Users.username == create_user_request.username) |
+        (Users.email == create_user_request.email)
+    ).first()
+
+    if existing_user:
+        return {"error": "Username or email already exists"}
+
+
     create_user_model= Users(
         username=create_user_request.username,
         email = create_user_request.email,
@@ -62,9 +74,14 @@ async def create_user(db:db_dependency,
         # created_at =create_user_request.created_at if create_user_request.created_at else datetime.utcnow()
         
     )
-    db.add(create_user_model)
-    db.commit()
-    db.refresh(create_user_model)  # Optional: Refresh the model to get updated values
+    try:
+        db.add(create_user_model)
+        db.commit()
+        db.refresh(create_user_model)  # Optional: Refresh the model to get updated values
+    except IntegrityError:
+        db.rollback()
+        return {"error": "An unexpected error occurred during registration"}
+
     return {
         'message': 'User created successfully',
         'user': {
@@ -96,27 +113,30 @@ async def create_user(db:db_dependency,
 #     return {'access_token': token, 'token_type':'bearer'}
 
 
-@router.post("/token", response_model=Token)
+@router.post("/login", response_model=Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),  # Updated for simplicity
     db: Session = Depends(get_db)
 ):
-    user =  authenticate_user(form_data.username, form_data.password, db)
-    
-    if not user:
-        raise HTTPException(
+    try:
+        user =  authenticate_user(form_data.username, form_data.password, db)
+
+        if not user:
+            raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Invalid username or password'
         )
     
-    token = create_access_token(user.username, user.id, timedelta(minutes=20))
+        token = create_access_token(user.username, user.id, timedelta(minutes=9000000))
     
-    return {
+        return {
         'access_token': token,
         'token_type': 'bearer',
         'username': user.username,
         'message': 'Login Successfully'
     }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 def authenticate_user(username: str, password: str, db: Session):
     user = db.query(Users).filter(Users.username == username).first()
@@ -139,10 +159,10 @@ def get_current_user(token: str = Depends(oauth2_bearer), db: Session = Depends(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: int = payload.get("id")
         if user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials of user id")
         user = db.query(Users).filter(Users.id == user_id).first()
         if user is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials of user")
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials of jwterror")
     return user
